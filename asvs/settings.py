@@ -53,7 +53,8 @@ INSTALLED_APPS = [
     'django_otp',
     'django_otp.plugins.otp_totp',
     'django_otp.plugins.otp_static',
-    'template_filters'
+    'template_filters',
+    'mozilla_django_oidc',
 ]
 
 MIDDLEWARE = [
@@ -81,6 +82,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'accountauth.context_processors.oidc_enabled',
             ],
         },
     },
@@ -159,6 +161,45 @@ CRISPY_TEMPLATE_PACK = "bootstrap3"
 # USE_THOUSAND_SEPARATOR = True
 AUTH_USER_MODEL = "accountauth.CustomUser"
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+
+AUTHENTICATION_BACKENDS = [
+    "accountauth.oidc.SurfConextOIDCBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+# SURFconext OIDC single sign-on. Disabled by default so local-only/test
+# deployments are unaffected unless explicitly configured. When enabled,
+# OIDC_RP_CLIENT_ID/OIDC_RP_CLIENT_SECRET must be set to the credentials
+# issued when registering this app in the SURFconext Service Registry
+# (https://serviceregistry.surfconext.nl/, or the "Playground" test
+# environment for connect.test.surfconext.nl).
+OIDC_ENABLED = env_bool("OIDC_ENABLED", False)
+OIDC_RP_CLIENT_ID = os.environ.get("OIDC_RP_CLIENT_ID", "")
+OIDC_RP_CLIENT_SECRET = os.environ.get("OIDC_RP_CLIENT_SECRET", "")
+OIDC_OP_AUTHORIZATION_ENDPOINT = os.environ.get(
+    "OIDC_OP_AUTHORIZATION_ENDPOINT",
+    "https://connect.test.surfconext.nl/oidc/authorize",
+)
+OIDC_OP_TOKEN_ENDPOINT = os.environ.get(
+    "OIDC_OP_TOKEN_ENDPOINT", "https://connect.test.surfconext.nl/oidc/token"
+)
+OIDC_OP_USER_ENDPOINT = os.environ.get(
+    "OIDC_OP_USER_ENDPOINT", "https://connect.test.surfconext.nl/oidc/userinfo"
+)
+OIDC_OP_JWKS_ENDPOINT = os.environ.get(
+    "OIDC_OP_JWKS_ENDPOINT", "https://connect.test.surfconext.nl/oidc/certs"
+)
+OIDC_RP_SIGN_ALGO = "RS256"
+OIDC_RP_SCOPES = os.environ.get("OIDC_RP_SCOPES", "openid profile email")
+# Least-privilege token retention: we only need the authenticated session,
+# not the raw tokens, once login has completed.
+OIDC_STORE_ACCESS_TOKEN = False
+OIDC_STORE_ID_TOKEN = False
+
+if OIDC_ENABLED and not DEBUG and (not OIDC_RP_CLIENT_ID or not OIDC_RP_CLIENT_SECRET):
+    raise ImproperlyConfigured(
+        "OIDC_RP_CLIENT_ID and OIDC_RP_CLIENT_SECRET must be set when OIDC_ENABLED is on."
+    )
 
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", [])
 SESSION_COOKIE_HTTPONLY = True

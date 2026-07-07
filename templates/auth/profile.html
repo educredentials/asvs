@@ -4,10 +4,16 @@
   <div>
     <p class="eyebrow">Account</p>
     <h1>{{ user.username }}</h1>
+    {% if user.auth_source == "oidc" %}
+    <p class="lead">Signed in via SURFconext. Your organisation manages your password and multi-factor authentication.</p>
+    {% else %}
     <p class="lead">Manage project access, trusted devices, and account settings.</p>
+    {% endif %}
   </div>
   <div class="toolbar">
+    {% if user.auth_source != "oidc" %}
     <button class="button button--ghost" type="button" data-modal-target="#password-modal">Change Password</button>
+    {% endif %}
     <button class="button button--ghost" type="button" data-modal-target="#username-modal">Change Username</button>
   </div>
 </section>
@@ -53,6 +59,9 @@
   <article class="panel">
     <h2>Trusted Devices</h2>
     <div class="grid" style="margin-top: 14px;">
+      {% if user.auth_source == "oidc" %}
+      <div class="alert">Two-factor authentication is managed by SURFconext for this account.</div>
+      {% else %}
       {% for d in devices %}
       <div class="category-item">
         <strong>{{ d }}</strong>
@@ -61,6 +70,7 @@
       {% empty %}
       <div class="alert">No verified devices.</div>
       {% endfor %}
+      {% endif %}
     </div>
   </article>
 </section>

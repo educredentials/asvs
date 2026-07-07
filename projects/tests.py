@@ -39,6 +39,22 @@ class ProjectAccessTests(TestCase):
         self.assertTrue(self.project.can_manage(self.viewer))
 
     @override_settings(SECURE_SSL_REDIRECT=False)
+    def test_oidc_user_reaches_two_factor_required_view_without_totp_device(self):
+        oidc_user = get_user_model().objects.create(
+            username='surfconext-user',
+            auth_source='oidc',
+            oidc_sub='surf-sub-abc',
+            is_two_factor_enabled=True,
+        )
+        oidc_user.set_unusable_password()
+        oidc_user.save()
+        self.client.force_login(oidc_user)
+
+        response = self.client.get(reverse('projectsmanage'))
+
+        self.assertEqual(response.status_code, 200)
+
+    @override_settings(SECURE_SSL_REDIRECT=False)
     def test_unauthorized_user_cannot_delete_project_by_id(self):
         user_agent = 'Mozilla/5.0 ASVS-Test'
         device_name = str(parse(user_agent))

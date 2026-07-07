@@ -45,6 +45,32 @@ Important environment variables. Yes, the secret really does need to be secret. 
 | `PORT` | `8000` | Container listen port. |
 | `GUNICORN_WORKERS` | `3` | Gunicorn worker count. |
 | `ASVS_HOST_PORT` | `8000` | Docker Compose host port. |
+| `OIDC_ENABLED` | `0` | Enables SURFconext SSO login when set to `1`, `true`, or `yes`. |
+| `OIDC_RP_CLIENT_ID` | none | Client ID issued by the SURFconext Service Registry. Required when `OIDC_ENABLED=1`. |
+| `OIDC_RP_CLIENT_SECRET` | none | Client secret issued alongside the client ID. Required when `OIDC_ENABLED=1`. |
+| `OIDC_OP_AUTHORIZATION_ENDPOINT` | SURFconext test/Playground | OIDC authorization endpoint. Override for production SURFconext. |
+| `OIDC_OP_TOKEN_ENDPOINT` | SURFconext test/Playground | OIDC token endpoint. |
+| `OIDC_OP_USER_ENDPOINT` | SURFconext test/Playground | OIDC userinfo endpoint. |
+| `OIDC_OP_JWKS_ENDPOINT` | SURFconext test/Playground | OIDC JWKS endpoint used to verify ID token signatures. |
+| `OIDC_RP_SCOPES` | `openid profile email` | Space-separated OIDC scopes requested from SURFconext. |
+
+### Single Sign-On (SURFconext)
+
+The app can authenticate users via [SURFconext](https://www.surf.nl/surfconext) using
+OpenID Connect, as an additional login option alongside local username/password
+accounts. SURFconext-authenticated accounts are linked by the stable OIDC `sub` claim
+(not username) and are treated as fully verified by their institution's own SSO, so they
+are **not** additionally required to set up the app's local TOTP two-factor step.
+
+To enable it:
+
+1. Register the app in the [SURFconext Service Registry](https://serviceregistry.surfconext.nl/)
+   (use the Playground/test environment first, at `connect.test.surfconext.nl`), and set
+   the redirect URI to `https://<host>/auth/oidc/callback/`.
+2. Set `OIDC_ENABLED=1`, `OIDC_RP_CLIENT_ID`, and `OIDC_RP_CLIENT_SECRET` from the
+   registration to the environment variables above. The default OP endpoints already
+   point at the SURFconext test environment; override them for production SURFconext.
+3. Restart the app. A "Log in with SURFconext" link appears on the login page.
 
 ## Run With Docker
 

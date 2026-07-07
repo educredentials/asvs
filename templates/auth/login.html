@@ -15,5 +15,11 @@
     <button type="submit" class="button button--primary">Log In</button>
     <a href="{% url 'signup' %}">Register a new account</a>
   </form>
+  {% if OIDC_ENABLED %}
+  <div class="form-grid" style="margin-top: 1.5rem;">
+    <p>Or, if your organisation is part of SURFconext:</p>
+    <a class="button button--ghost" href="{% url 'oidc_authentication_init' %}">Log in with SURFconext</a>
+  </div>
+  {% endif %}
 </section>
 {% endblock content %}

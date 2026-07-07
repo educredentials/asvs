@@ -48,14 +48,24 @@ def get_or_create_current_totp_device(user, request):
 
 
 def has_verified_2fa(user):
-    return user.is_authenticated and user.is_two_factor_enabled
+    if not user.is_authenticated:
+        return False
+    if user.auth_source == CustomUser.AUTH_SOURCE_OIDC:
+        # SURFconext institutional SSO is the trusted authentication factor for
+        # these accounts; they are exempt from the local TOTP 2FA requirement.
+        return True
+    return user.is_two_factor_enabled
 
 
 def request_has_verified_2fa(request):
+    user = request.user
+    if not user.is_authenticated:
+        return False
+    if user.auth_source == CustomUser.AUTH_SOURCE_OIDC:
+        return True
     return (
-        request.user.is_authenticated
-        and request.user.is_two_factor_enabled
-        and current_totp_device(request.user, request, confirmed=True) is not None
+        user.is_two_factor_enabled
+        and current_totp_device(user, request, confirmed=True) is not None
     )
 
 
@@ -143,12 +153,20 @@ def modify_password(request):
 
     #Getting user info
     projects = Projects.objects.visible_to(request.user)
-        
+
     devices=list(request.user.totpdevice_set.all())
     verified_devices=[]
     for d in devices:
         if d.confirmed==True:
             verified_devices.append(d)
+
+    if request.user.auth_source == CustomUser.AUTH_SOURCE_OIDC:
+        # SURFconext-linked accounts have no local password to change.
+        return render(request, 'auth/profile.html', {
+            'projects': projects,
+            'devices': verified_devices,
+            'message': "Your password is managed by SURFconext and cannot be changed here.",
+        })
 
     data = dict()
     if request.method == 'POST':

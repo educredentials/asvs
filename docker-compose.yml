@@ -13,6 +13,14 @@ services:
       GUNICORN_WORKERS: "2"
       PORT: "8000"
       DJANGO_SQLITE_PATH: "/app/db/db.sqlite3"
+      # Enables SURFconext SSO login (test/Playground endpoints are the
+      # default; see README.md "Single Sign-On (SURFconext)" section).
+      # Set OIDC_RP_CLIENT_ID/OIDC_RP_CLIENT_SECRET in a local, gitignored
+      # .env file (docker compose loads it automatically) -- never commit
+      # real client credentials into this file.
+      OIDC_ENABLED: "1"
+      OIDC_RP_CLIENT_ID: "${OIDC_RP_CLIENT_ID:-}"
+      OIDC_RP_CLIENT_SECRET: "${OIDC_RP_CLIENT_SECRET:-}"
     volumes:
       - asvs_db:/app/db
       - asvs_storage:/app/storage

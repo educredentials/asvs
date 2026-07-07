@@ -32,10 +32,17 @@ from user_agents import parse
 
 
 def request_has_verified_2fa(request):
-    if not request.user.is_authenticated or request.user.is_two_factor_enabled is not True:
+    user = request.user
+    if not user.is_authenticated:
+        return False
+    if user.auth_source == user.AUTH_SOURCE_OIDC:
+        # SURFconext institutional SSO is the trusted authentication factor for
+        # these accounts; they are exempt from the local TOTP 2FA requirement.
+        return True
+    if user.is_two_factor_enabled is not True:
         return False
     device_name = str(parse(request.META.get('HTTP_USER_AGENT', 'unknown')))
-    return request.user.totpdevice_set.filter(
+    return user.totpdevice_set.filter(
         confirmed=True,
         name=device_name,
     ).exists()
