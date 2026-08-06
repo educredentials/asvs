@@ -72,6 +72,85 @@ To enable it:
    point at the SURFconext test environment; override them for production SURFconext.
 3. Restart the app. A "Log in with SURFconext" link appears on the login page.
 
+## OpenAPI Spec
+
+A full REST API is available under `/api/` with an auto-generated OpenAPI 3.0 spec:
+
+| Path | Description |
+| --- | --- |
+| `GET /api/schema/` | OpenAPI 3.0 JSON specification |
+| `GET /api/docs/` | Swagger UI for browsing and testing the API |
+| `GET /api/projects/` | List all projects |
+| `POST /api/projects/` | Create a project |
+| `GET /api/projects/{id}/` | Get project details |
+| `DELETE /api/projects/{id}/` | Delete a project |
+| `GET /api/requirements/` | List requirements (optionally filtered by project) |
+| `PATCH /api/requirements/{id}/` | Update a requirement (status, notes, etc.) |
+| `POST /api/requirements/{id}/evidence/` | Add evidence to a requirement |
+| `POST /api/requirements/{id}/comments/` | Add a comment to a requirement |
+| `GET /api/projects/{id}/export_csv/` | Export project progress as CSV |
+
+Authentication: `Authorization: Token <your-api-token>` — generate one with `python manage.py create_token <username>`.
+
+---
+
+## MCP Server
+
+A Model Context Protocol (MCP) server bridges the ASVS application to AI agents like opencode. It exposes 13 tools for querying and modifying projects, requirements, evidence, and comments.
+
+### Configuration
+
+1. **Generate a token for the MCP endpoint**
+
+```bash
+docker compose exec asvs python manage.py create_token <username>
+```
+
+Note the 40-character token key.
+
+2. **Add the MCP server to your opencode config**
+
+In `~/.config/opencode/opencode.json` (or per-project opencode config):
+
+```json
+{
+  "mcp": {
+    "asvs": {
+      "type": "remote",
+      "url": "http://127.0.0.1:8000/api/mcp/",
+      "headers": {
+        "Authorization": "Bearer <your-token-here>"
+      }
+    }
+  }
+}
+```
+
+3. **Restart opencode** — the MCP tools will appear in the tool list.
+
+### Available Tools
+
+| Tool | Description | Key Arguments |
+| --- | --- | --- |
+| `list_projects` | List all ASVS projects | `level`, `owner` |
+| `get_project` | Get a single project | `id` |
+| `create_project` | Create a new project | `project_name`, `project_description` |
+| `update_project` | Update a project | `id`, `project_name`, `project_description` |
+| `delete_project` | Delete a project | `id` |
+| `get_requirements` | List requirements for a project | `project_id`, `status` |
+| `get_requirement` | Get a requirement with nested evidence and comments | `id` |
+| `update_requirement_status` | Update status of a requirement | `id`, `status`, `note` |
+| `add_evidence` | Add evidence to a requirement | `requirement_id`, `title`, `url`, `notes` |
+| `add_comment` | Add a comment to a requirement | `requirement_id`, `body` |
+| `list_members` | List project members | `project_id` |
+| `add_member` | Add a member with a role | `project_id`, `username`, `role` |
+| `list_audit_events` | List audit events for a project | `project_id`, `limit` |
+
+Status values: `na`, `incomplete`, `complete`, `review`.
+Roles: `owner`, `editor`, `reviewer`, `viewer`.
+
+---
+
 ## Run With Docker
 
 Build and run the image directly:
@@ -89,8 +168,6 @@ docker run -d \
   -v asvs_storage:/app/storage \
   asvs
 ```
-
-Or use Compose with persistent volumes:
 
 ```sh
 docker compose up --build

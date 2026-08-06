@@ -2,6 +2,8 @@
 from django.conf import settings
 from django.contrib import admin
 from django.urls import path, include, re_path
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from mcp.app import mcp_endpoint
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -11,8 +13,11 @@ urlpatterns = [
     path('help/', include('help.urls')),
     path('auth/', include('accountauth.urls')),
     path('projects/', include('projects.urls')),
-    re_path(r'^api/', include('accountauth.urls')),
-
+    path('api/schema/', SpectacularAPIView.as_view(), name='api-schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='api-schema'), name='api-docs'),
+    path('api/', include('projects.api.urls')),
+    path('api/', include('accountauth.api.urls')),
+    path('api/mcp/', mcp_endpoint, name='mcp-endpoint'),
 ]
 
 if settings.OIDC_ENABLED:

@@ -7,6 +7,7 @@ reportlab==4.5.1
 django-otp==1.7.0
 djangorestframework==3.16.1
 djangorestframework-jsonapi==8.1.0
+drf-spectacular==0.28.0
 PyYAML==6.0.3
 ua-parser>=1.0,<2
 user-agents>=2.2,<3
