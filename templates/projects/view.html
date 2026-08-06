@@ -1,4 +1,4 @@
-{% extends "base.html" %} {% block title %}{{ project.project_name }}{% endblock title %}
+{% extends "base.html" %} {% load dict_filters %}{% block title %}{{ project.project_name }}{% endblock title %}
 {% block content %}
 <section class="page-head">
   <div>
@@ -9,6 +9,7 @@
   <div class="toolbar">
     <a class="button button--ghost" href="{% url 'projectsdownload' projectid=project.project_id %}">JSON</a>
     <a class="button button--ghost" href="{% url 'projectsdownloadcsv' projectid=project.project_id %}">CSV</a>
+    <a class="button button--ghost" href="{% url 'iso27001_report' projectid=project.project_id %}">ISO 27001</a>
     <a class="button button--primary" href="{% url 'generate_pdf' projectid=project.project_id %}">PDF Report</a>
   </div>
 </section>
@@ -53,7 +54,7 @@
       <h2>Filter</h2>
       <label class="field">
         <span>Search</span>
-        <input type="search" name="q" value="{{ query }}" placeholder="Requirement, CWE, NIST, note">
+        <input type="search" name="q" value="{{ query }}" placeholder="Requirement, CWE, NIST, ISO, note">
       </label>
       <label class="field">
         <span>Status</span>
@@ -112,11 +113,12 @@
           <span class="req-id">{{ requirement.req_id }}</span>
           <div>
             <p class="req-description">{{ requirement.req_description }}</p>
-            <div class="requirement-meta">
-              {{ requirement.section_name }}
-              {% if requirement.cwe %} · CWE {{ requirement.cwe }}{% endif %}
-              {% if requirement.nist %} · NIST {{ requirement.nist }}{% endif %}
-            </div>
+              <div class="requirement-meta">
+                {{ requirement.section_name }}
+                {% if requirement.cwe %} · CWE {{ requirement.cwe }}{% endif %}
+                {% if requirement.nist %} · NIST {{ requirement.nist }}{% endif %}
+                {% if requirement.iso27001 %} · ISO {{ requirement.iso27001 }}{% endif %}
+              </div>
           </div>
           {% if requirement.status == "complete" %}
           <span class="status-pill status-complete" data-status-pill>{{ requirement.get_status_display }}</span>

@@ -1,5 +1,6 @@
 from django.urls import re_path
 from .views import (
+    generate_iso27001_report,
     generate_pdf,
     modify_allowed_users,
     project_add,
@@ -27,5 +28,6 @@ urlpatterns = [
     re_path(r'^requirement/(?P<projectid>\d+)/(?P<req_id>[\w.]+)/evidence$', project_requirement_evidence_add, name='project_requirement_evidence_add'),
     re_path(r'^requirement/(?P<projectid>\d+)/(?P<req_id>[\w.]+)/comment$', project_requirement_comment_add, name='project_requirement_comment_add'),
     re_path(r'^generatepdf/(?P<projectid>\S+)$', generate_pdf, name="generate_pdf"),
-    re_path(r'^modifyallowedusers/(?P<projectid>\S+)$', modify_allowed_users, name="modify_allowed_users")
+    re_path(r'^modifyallowedusers/(?P<projectid>\S+)$', modify_allowed_users, name="modify_allowed_users"),
+    re_path(r'^iso27001/(?P<projectid>\d+)$', generate_iso27001_report, name="iso27001_report"),
 ]

@@ -7,6 +7,12 @@ from django.conf import settings
 from projects.models import ProjectRequirement
 
 
+def _clean_iso27001(value):
+    if isinstance(value, list):
+        return ", ".join(value)
+    return str(value)
+
+
 def storage_dir():
     return os.path.join(settings.BASE_DIR, "storage")
 
@@ -53,6 +59,7 @@ def requirement_to_dict(requirement):
         "level3": requirement.level3,
         "cwe": requirement.cwe,
         "nist": requirement.nist,
+        "iso27001": _clean_iso27001(requirement.iso27001),
         "enabled": requirement.enabled,
         "disabled": requirement.disabled,
         "status": requirement.status,
@@ -82,6 +89,7 @@ def sync_project_requirements(project, requirements):
             "level3": requirement.get("level3", ""),
             "cwe": requirement.get("cwe", ""),
             "nist": requirement.get("nist", ""),
+            "iso27001": _clean_iso27001(requirement.get("iso27001", "")),
             "status": requirement.get("status", ProjectRequirement.STATUS_NOT_APPLICABLE),
             "note": requirement.get("note", ""),
         }

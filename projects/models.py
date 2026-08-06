@@ -124,6 +124,7 @@ class ProjectRequirement(models.Model):
     level3 = models.CharField(max_length=10, blank=True, default="")
     cwe = models.CharField(max_length=255, blank=True, default="")
     nist = models.CharField(max_length=255, blank=True, default="")
+    iso27001 = models.CharField(max_length=255, blank=True, default="")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_NOT_APPLICABLE)
     note = models.TextField(blank=True, default="")
     reviewed_by = models.CharField(max_length=150, blank=True, default="")

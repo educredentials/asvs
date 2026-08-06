@@ -159,6 +159,7 @@ def requirement_queryset_for_project(project, request):
             | Q(section_name__icontains=query)
             | Q(cwe__icontains=query)
             | Q(nist__icontains=query)
+            | Q(iso27001__icontains=query)
             | Q(note__icontains=query)
         )
     return requirements
@@ -380,7 +381,7 @@ def project_download_csv(request, projectid):
     response = HttpResponse(content_type="text/csv")
     response['Content-Disposition'] = 'attachment; filename="asvs-project-{0}.csv"'.format(p.id)
     writer = csv.writer(response)
-    writer.writerow(["Requirement", "Chapter", "Section", "Status", "CWE", "NIST", "Note", "Evidence", "Comments"])
+    writer.writerow(["Requirement", "Chapter", "Section", "Status", "CWE", "NIST", "ISO 27001", "Note", "Evidence", "Comments"])
     for requirement in p.requirements.prefetch_related("evidence", "comments"):
         writer.writerow([
             requirement.req_id,
@@ -389,6 +390,7 @@ def project_download_csv(request, projectid):
             requirement.get_status_display(),
             requirement.cwe,
             requirement.nist,
+            requirement.iso27001,
             requirement.note,
             requirement.evidence.count(),
             requirement.comments.count(),
@@ -588,4 +590,170 @@ def detailsBackground(canvas,colour):
     path.lineTo(20*cm,24*cm)
     path.lineTo(20*cm,16.5*cm)
     path.lineTo(0.7*cm,16.5*cm)
-    canvas.drawPath(path,True,True)     
+    canvas.drawPath(path,True,True)
+
+
+# ISO 27001 Annex A control names for display
+ISO_CONTROL_NAMES = {
+    "A.5": "Organisational controls",
+    "A.6": "People controls",
+    "A.7": "Physical controls",
+    "A.8": "Technological controls",
+    "A.5.1": "Policies for information security",
+    "A.5.7": "Threat intelligence",
+    "A.5.11": "ICT security for use of cloud services",
+    "A.5.19": "Security of supplier relationships",
+    "A.5.23": "Information security for use of AI",
+    "A.6.1": "Roles and responsibilities",
+    "A.6.2": "Information security education and training",
+    "A.6.3": "Competence",
+    "A.6.4": "Manageral supervision",
+    "A.6.5": "Information security behaviour",
+    "A.6.7": "Information security accountability",
+    "A.7.1": "Terms and conditions of employment",
+    "A.7.2": "Education and training",
+    "A.7.3": "Disciplinary process",
+    "A.7.4": "Responsibilities after termination or change of employment",
+    "A.7.5": "Confidentiality or non-disclosure agreements",
+    "A.7.6": "Remote working",
+    "A.8.1": "Endpoint security",
+    "A.8.2": "Access rights",
+    "A.8.3": "Information access restriction",
+    "A.8.4": "Secure authentication",
+    "A.8.5": "Session management",
+    "A.8.6": "Web filtering",
+    "A.8.9": "Configuration management",
+    "A.8.10": "Data leakage prevention",
+    "A.8.12": "Backup",
+    "A.8.14": "Data masking",
+    "A.8.15": "Monitoring activities",
+    "A.8.16": "Cybersecurity incident management",
+    "A.8.20": "Secure development lifecycle",
+    "A.8.22": "Web filtering",
+    "A.8.24": "Use of cryptography",
+    "A.8.25": "Secure development environment",
+    "A.3.1": "Platform security",
+    "A.3.6": "Key management",
+    "A.3.7": "Cryptography",
+    "A.3.8": "Data protection",
+}
+
+
+def iso27001_status_color(status):
+    """Return Bootstrap-like color for status."""
+    colors = {
+        'COMPLETE': '#28a745',
+        'INCOMPLETE': '#dc3545',
+        'NA': '#007bff',
+        'REVIEW': '#ffc107',
+    }
+    return colors.get(status, '#6c757d')
+
+
+def calculate_iso_compliance(requirements):
+    """Group requirements by ISO 27001 control and calculate compliance."""
+    import re
+    
+    def clean_iso(val):
+        if isinstance(val, list):
+            return val
+        if isinstance(val, str):
+            return re.findall(r'[A-Z]\.\d+\.\d+', val)
+        return [val]
+
+    controls = {}
+    total_reqs = 0
+    complete_reqs = 0
+
+    for req in requirements:
+        parts = clean_iso(req.iso27001)
+        if not parts:
+            continue
+
+        for control in parts:
+            control = control.strip()
+            if not re.match(r'^[A-Z]\.\d+', control):
+                continue
+            if control not in controls:
+                controls[control] = {
+                    'major': control.split('.')[0] + '.',
+                    'total': 0,
+                    'complete': 0,
+                    'incomplete': 0,
+                    'na': 0,
+                    'review': 0,
+                    'requirements': [],
+                }
+            controls[control]['total'] += 1
+            total_reqs += 1
+            if req.status == 'complete':
+                controls[control]['complete'] += 1
+                complete_reqs += 1
+            elif req.status == 'incomplete':
+                controls[control]['incomplete'] += 1
+            elif req.status == 'na':
+                controls[control]['na'] += 1
+            elif req.status == 'review':
+                controls[control]['review'] += 1
+
+            controls[control]['requirements'].append(req)
+
+    # Sort and group by major category
+    grouped = {}
+    for control, data in sorted(controls.items()):
+        if data['total'] == 0:
+            continue
+        pct = round(data['complete'] / data['total'] * 100, 1) if data['total'] else 0
+
+        # Group requirements by chapter into display format
+        chapter_list = {}
+        for req in data['requirements']:
+            ch = req.chapter_name or 'Unknown'
+            if ch not in chapter_list:
+                chapter_list[ch] = []
+            chapter_list[ch].append(req)
+
+        # Sort chapters
+        sorted_chapters = [
+            {'name': ch, 'requirements': reqs}
+            for ch, reqs in sorted(chapter_list.items())
+        ]
+
+        if data['major'] not in grouped:
+            grouped[data['major']] = []
+        grouped[data['major']].append({
+            'name': control,
+            'total': data['total'],
+            'complete': data['complete'],
+            'incomplete': data['incomplete'],
+            'na': data['na'],
+            'review': data['review'],
+            'percentage': pct,
+            'by_chapter': sorted_chapters,
+        })
+
+    # Convert to sorted list of tuples
+    sorted_controls = []
+    for major in sorted(grouped):
+        sorted_controls.append((major, grouped[major]))
+
+    overall_pct = round(complete_reqs / total_reqs * 100, 1) if total_reqs else 0
+    return sorted_controls, total_reqs, complete_reqs, overall_pct
+
+
+@two_factor_required
+def generate_iso27001_report(request, projectid):
+    """Generate ISO 27001 compliance report grouped by controls."""
+    p = get_viewable_project(request, projectid)
+    requirements = list(p.requirements.all())
+    controls_data, total_reqs, complete_reqs, overall_pct = calculate_iso_compliance(requirements)
+
+    return render(request, 'projects/iso27001_report.html', {
+        'project': p,
+        'controls': controls_data,
+        'total_reqs': total_reqs,
+        'complete_reqs': complete_reqs,
+        'overall_pct': overall_pct,
+        'iso_control_names': ISO_CONTROL_NAMES,
+        'status_choices': dict(ProjectRequirement.STATUS_CHOICES),
+    })
